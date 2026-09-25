@@ -1,8 +1,6 @@
-
 -- ===============================================================
  --                          scavazimabzabzzza hub      
 -- ===============================================================
-
 local inputService        = game:GetService("UserInputService")
 local runService          = game:GetService("RunService")
 local tweenService        = game:GetService("TweenService")
@@ -13,10 +11,61 @@ local CoreGui             = game:GetService("CoreGui")
 local Workspace           = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
+-- ============================================================
+-- GROUP ACCESS CHECK
+-- ============================================================
+local GROUP_ID = 915657087
+local MIN_RANK = 3
+
+local accessGranted = false
+local menu  -- forward declaration, assigned after the check passes
+
+local function checkGroupAccess()
+    local ok, rank = pcall(function()
+        return localPlayer:GetRankInGroup(GROUP_ID)
+    end)
+    if not ok or type(rank) ~= "number" then return false end
+    return rank >= MIN_RANK
+end
+
+local function enforceAccess()
+    if checkGroupAccess() then
+        accessGranted = true
+        return true
+    end
+    accessGranted = false
+    return false
+end
+
+local function revokeMenu()
+    if menu and menu.Parent then
+        pcall(function() menu:Destroy() end)
+    end
+end
+
+if not enforceAccess() then
+    return
+end
+
+localPlayer.CharacterAdded:Connect(function()
+    task.defer(function()
+        if not enforceAccess() then revokeMenu() end
+    end)
+end)
+
+local lastServerId = game.JobId
+runService.Heartbeat:Connect(function()
+    if game.JobId ~= lastServerId then
+        lastServerId = game.JobId
+        if not enforceAccess() then revokeMenu() end
+    end
+end)
+-- ============================================================
+
 local syn        = _G.syn
 local protectgui = _G.protectgui
 
-local menu = game:GetObjects("rbxassetid://12702460854")[1]
+menu = game:GetObjects("rbxassetid://12702460854")[1]
 if syn and syn.protect_gui then
     syn.protect_gui(menu)
 elseif protectgui then
